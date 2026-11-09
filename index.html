@@ -1,0 +1,206 @@
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .calculator {
+      width: 320px;
+      max-width: 94vw;
+      padding: 18px;
+      background: #ffffff;
+      border: 3px solid #1e66f5;
+      border-radius: 18px;
+    }
+
+    .display {
+      height: 64px;
+      margin-bottom: 18px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      border: 3px solid #1e66f5;
+      border-radius: 12px;
+      font-size: 28px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      height: 56px;
+      border: none;
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      background: #d9d9d9;
+      color: #000;
+      touch-action: manipulation;
+    }
+
+    button:active { filter: brightness(0.85); }
+
+    .clear { background: #facc15; color: #000; }
+    .back  { background: #facc15; color: #000; }
+    .op    { background: #1e66f5; color: #fff; }
+    .equal { background: #1e66f5; color: #fff; }
+    .zero  { grid-column: span 2; }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="display" id="display">0</div>
+
+    <div class="keys">
+      <button class="clear" onclick="clearAll()">C</button>
+      <button class="back" onclick="backspace()">⌫</button>
+      <button class="op" onclick="percent()">%</button>
+      <button class="op" onclick="addOperator('/')">÷</button>
+
+      <button onclick="addNumber('7')">7</button>
+      <button onclick="addNumber('8')">8</button>
+      <button onclick="addNumber('9')">9</button>
+      <button class="op" onclick="addOperator('*')">×</button>
+
+      <button onclick="addNumber('4')">4</button>
+      <button onclick="addNumber('5')">5</button>
+      <button onclick="addNumber('6')">6</button>
+      <button class="op" onclick="addOperator('-')">−</button>
+
+      <button onclick="addNumber('1')">1</button>
+      <button onclick="addNumber('2')">2</button>
+      <button onclick="addNumber('3')">3</button>
+      <button class="op" onclick="addOperator('+')">+</button>
+
+      <button class="zero" onclick="addNumber('0')">0</button>
+      <button onclick="addDot()">.</button>
+      <button class="equal" onclick="calculate()">=</button>
+    </div>
+  </div>
+
+  <script>
+    var display = document.getElementById("display");
+    var expr = "";
+    var symbols = { "*": "×", "/": "÷", "-": "−", "+": "+" };
+
+    function render() {
+      if (expr === "") {
+        display.textContent = "0";
+        return;
+      }
+      display.textContent = expr.replace(/[*\/\-+]/g, function (m) {
+        return symbols[m];
+      });
+    }
+
+    function addNumber(n) {
+      expr += n;
+      render();
+    }
+
+    function addOperator(op) {
+      if (expr === "") {
+        if (op === "-") expr = "-";
+        render();
+        return;
+      }
+      if (/[*\/+\-]$/.test(expr)) {
+        if (expr === "-") return;
+        expr = expr.slice(0, -1) + op;
+      } else {
+        expr += op;
+      }
+      render();
+    }
+
+    function addDot() {
+      var parts = expr.split(/[*\/+\-]/);
+      var last = parts[parts.length - 1];
+      if (last.indexOf(".") !== -1) return;
+      expr += last === "" ? "0." : ".";
+      render();
+    }
+
+    function percent() {
+      var match = expr.match(/(\d+\.?\d*)$/);
+      if (!match) return;
+      var value = Number((parseFloat(match[1]) / 100).toFixed(10));
+      expr = expr.slice(0, -match[1].length) + value;
+      render();
+    }
+
+    function clearAll() {
+      expr = "";
+      render();
+    }
+
+    function backspace() {
+      expr = expr.slice(0, -1);
+      render();
+    }
+
+    function evaluate(s) {
+      var t = s.match(/\d+\.?\d*|\.\d+|[*\/+\-]/g);
+      if (!t) return NaN;
+      var i = 0, sign = 1, nums = [], ops = [];
+      if (t[0] === "-") { sign = -1; i = 1; }
+      nums.push(sign * parseFloat(t[i++]));
+      while (i < t.length) {
+        ops.push(t[i++]);
+        nums.push(parseFloat(t[i++]));
+      }
+      var n2 = [nums[0]], o2 = [];
+      for (var k = 0; k < ops.length; k++) {
+        var v = nums[k + 1];
+        if (ops[k] === "*") n2[n2.length - 1] *= v;
+        else if (ops[k] === "/") n2[n2.length - 1] /= v;
+        else { o2.push(ops[k]); n2.push(v); }
+      }
+      var r = n2[0];
+      for (var j = 0; j < o2.length; j++) {
+        r = o2[j] === "+" ? r + n2[j + 1] : r - n2[j + 1];
+      }
+      return r;
+    }
+
+    function calculate() {
+      if (expr === "" || /[*\/+\-]$/.test(expr)) return;
+      var result = evaluate(expr);
+      if (!isFinite(result)) {
+        expr = "";
+        display.textContent = "Error";
+        return;
+      }
+      expr = String(Math.round(result * 1e10) / 1e10);
+      render();
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (/^[0-9]$/.test(e.key)) addNumber(e.key);
+      else if (["+", "-", "*", "/"].indexOf(e.key) !== -1) addOperator(e.key);
+      else if (e.key === ".") addDot();
+      else if (e.key === "%") percent();
+      else if (e.key === "Enter" || e.key === "=") { e.preventDefault(); calculate(); }
+      else if (e.key === "Backspace") backspace();
+      else if (e.key === "Escape") clearAll();
+    });
+  </script>
+</body>
+</html>
